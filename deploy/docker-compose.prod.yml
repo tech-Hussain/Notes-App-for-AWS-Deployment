@@ -1,0 +1,24 @@
+services:
+  web:
+    image: ${REGISTRY}/notes-app/web:${IMAGE_TAG}
+    ports: ["80:80"]                    # only port on the host; SG allows it from the ALB only
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [frontend]
+    logging:
+      driver: awslogs
+      options: { awslogs-region: "${AWS_REGION}", awslogs-group: /notes-app/web }
+
+  api:
+    image: ${REGISTRY}/notes-app/api:${IMAGE_TAG}
+    env_file: .env.runtime              # written by deploy.sh from SSM, mode 600
+    restart: unless-stopped
+    networks: [frontend]                # no ports: reachable only from web
+    logging:
+      driver: awslogs
+      options: { awslogs-region: "${AWS_REGION}", awslogs-group: /notes-app/api }
+
+networks:
+  frontend:

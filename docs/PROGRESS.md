@@ -32,3 +32,38 @@ Files: `frontend/Dockerfile`, `frontend/nginx.conf`, `backend/Dockerfile` (2-sta
 Checkpoint 2 results: web/api/mongo all healthy; `localhost:8080` serves app and `/notes/123` returns 200 (SPA fallback); `localhost:5000` unreachable from host; `localhost:8080/api/health` 200 via Nginx; web cannot resolve/reach mongo; api runs as `node`; notes persisted across `compose down` + `up`.
 Image sizes: web 74 MB, api 269 MB (slightly above the plan's ~60/~250 targets; those are approximate and acceptable).
 [SCREENSHOT] to take: `docker compose ps` output, and the app at http://localhost:8080.
+
+## Phase 3 � Tests and repository (2026-11-04)
+Repo: https://github.com/tech-Hussain/Notes-App-for-AWS-Deployment (public). Local branch is `master`, one commit "Initial setup" (97 files; no `.env`, `node_modules` or state files tracked; only `.env.example`).
+Secret scan: `git grep` for mongodb:// / mongodb+srv / AKIA hits only the plan/README docs, the docker-compose service URI and the credential-less dev default in `env.ts`. History scan clean.
+Tests: added `backend/tests/api.integration.test.ts` (real MongoDB, DB `notes_test` via `MONGODB_URI_TEST`, dropped after run). Backend: 78 passing with Mongo. Frontend: 108 passing, build OK. No frontend lint script exists, so none run.
+Note for Phase 9: the code reads `MONGODB_URI`; CI service container needs a reachable Mongo at `mongodb://localhost:27017/notes_test` (set `MONGODB_URI_TEST`).
+
+## Phase 4 prep – region and login (2026-11-04)
+Region changed from ap-south-1 (Mumbai) to **ap-southeast-2 (Sydney)** because the new AWS account's project region is Sydney. Wherever the plan says ap-southeast-2 / ap-southeast-2a / ap-southeast-2b use ap-southeast-2 / ap-southeast-2a / ap-southeast-2b (Terraform `region` and `azs` variables).
+Auth: "new AWS experience" browser login (`aws login --profile notes-admin --region ap-southeast-2`), no IAM user/access keys. Temporary credentials (12 h, renewable). Agent Toolkit installer deliberately not installed.
+
+## Phase 4 – AWS baseline (2026-11-04)
+Auth switched to IAM user `notes-admin` (account <ACCOUNT_ID>) with an access key (the browser `aws login` kept failing with TOKEN_EXPIRED). Key CSV `notes-admin_accessKeys.csv` is in the project folder but gitignored (`*accessKeys*.csv`); move it out of the folder when convenient. Profile `notes-admin`, region ap-southeast-2.
+Verified: identity is user/notes-admin (not root). t3.micro and t3.small offered in ap-southeast-2a, 2b, 2c (use 2a and 2b). Elastic IP quota 5 (OK).
+vCPU quota was **5** (< 8 needed). Increase to 16 requested (id 9a4df5eabe5c4d8284530db753d967aek6bBBf7U), status PENDING.
+Still open: root MFA (AccountMFAEnabled = 0), notes-admin MFA (none), budget (none), Cost Explorer.
+
+## Phase 4 update (2026-11-04)
+Budget `notes-app-monthly` created: US$50/month (total student budget is US$100; target total spend well under US$50), email alerts at 50%, 80%, 100% of actual cost to the user's gmail. vCPU quota increase APPROVED (now 16). Cost Explorer API responds (enabled). MFA: API still reports root AccountMFAEnabled=0 and no MFA device on notes-admin - to be re-checked.
+
+## Phase 5 – Terraform network (2026-11-04)
+MFA: user confirmed enabled; AWS API still reported none at the time (waived by user, recheck later).
+Wrote `infra/` (providers, variables, network, outputs, tfvars example). `terraform fmt`, `validate` pass. `terraform plan`: 19 to add, 0 to change, 0 to destroy (VPC, IGW, 6 subnets, EIP, NAT, 2 route tables, 6 associations, S3 endpoint). NOT yet applied: waiting for user approval.
+
+## Phases 6-8 code written, not applied (2026-11-04)
+Terraform now covers: security groups (SG-to-SG rules, no port 22), ECR (immutable, scan on push), S3 backup bucket, IAM roles (least privilege), CloudWatch log groups, MongoDB EC2 + encrypted EBS, ALB + target group (/api/health), launch template + ASG (2-4) + CPU target tracking. Also `deploy/docker-compose.prod.yml`, `deploy/deploy.sh`, `scripts/create-ssm-params.sh`, user-data templates.
+`terraform validate` OK. Full plan: 59 to add, 0 to change, 0 to destroy. Nothing applied yet; apply is staged: (1) ECR only, (2) push images + create SSM params, (3) full apply.
+Design notes: SSM param name stays MONGO_URI (plan); deploy.sh writes it as MONGODB_URI (what the code reads) plus APP_VERSION.
+
+## Phases 5-8 APPLIED (2026-11-04)
+Stage 1 ECR; images `519185e` pushed (linux/amd64); SSM params created (7) via `scripts/create-ssm-params.sh` (run under Git Bash with MSYS_NO_PATHCONV=1); full apply: 57 added. State backed up to ~/tfstate-backup.
+ALB: http://notes-alb-42424767.ap-southeast-2.elb.amazonaws.com . 2 targets healthy (2a, 2b), /api/health 200 db up version 519185e; register + note create via ALB OK; deep link 200; private instance IP unreachable from laptop; DB 10.0.21.10 no public IP, auth enforced (checked via SSM), 20 GiB encrypted EBS attached; S3 public access fully blocked; SG rules use SG references; no port 22.
+Evidence: docs/evidence/cli-evidence.txt, docs/evidence/app-via-alb-login.png (headless Edge). AWS console screenshots still to be taken by the user.
+Note: ECR scan findings not available for buildx image index (attestation manifests); use --provenance=false in CI.
+Billing running since this apply (~US$3-4/day).

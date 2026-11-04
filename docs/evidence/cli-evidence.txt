@@ -1,0 +1,68 @@
+
+===== Subnets (Phase 5) =====
+----------------------------------------------------------------
+|                        DescribeSubnets                       |
++----------------+----------------+-------------------+--------+
+|  notes-app-0   |  10.0.11.0/24  |  ap-southeast-2a  |  False |
+|  notes-db-1    |  10.0.22.0/24  |  ap-southeast-2b  |  False |
+|  notes-public-0|  10.0.1.0/24   |  ap-southeast-2a  |  True  |
+|  notes-public-1|  10.0.2.0/24   |  ap-southeast-2b  |  True  |
+|  notes-db-0    |  10.0.21.0/24  |  ap-southeast-2a  |  False |
+|  notes-app-1   |  10.0.12.0/24  |  ap-southeast-2b  |  False |
++----------------+----------------+-------------------+--------+
+
+===== Route tables =====
+[["notes-public-rt",[["10.0.0.0/16","local"],["0.0.0.0/0","igw-0bcca45f47cf3088d"]]],[null,[["10.0.0.0/16","local"]]],["notes-private-rt",[["10.0.0.0/16","local"],["0.0.0.0/0","nat-09852e894ee4c98db"],["pl-6ca54005","vpce-08058fa40447f3c93"]]]]
+
+===== NAT =====
+nat-09852e894ee4c98db	available
+
+===== DB instance (no public IP) =====
+10.0.21.10	None	running
+
+===== App instances (no public IP, 2 AZs) =====
+i-04025885092273b0e	10.0.12.200	None	ap-southeast-2b
+i-08851bd08cc236075	10.0.11.152	None	ap-southeast-2a
+
+===== Security group rules =====
+------------------------------------------------------------------------------------------
+|                               DescribeSecurityGroupRules                               |
++-----------------------+--------+--------+--------+------------+------------------------+
+|  sg-0fd2aeddc8ff1d9c7 |  True  |  443   |  443   |  0.0.0.0/0 |  None                  |
+|  sg-0b213bd4f0de10473 |  True  |  443   |  443   |  0.0.0.0/0 |  None                  |
+|  sg-0b213bd4f0de10473 |  True  |  27017 |  27017 |  None      |  sg-0fd2aeddc8ff1d9c7  |
+|  sg-0b213bd4f0de10473 |  False |  80    |  80    |  None      |  sg-06d7fb42f310e57c7  |
+|  sg-06d7fb42f310e57c7 |  True  |  80    |  80    |  None      |  sg-0b213bd4f0de10473  |
+|  sg-0fd2aeddc8ff1d9c7 |  False |  27017 |  27017 |  None      |  sg-0b213bd4f0de10473  |
+|  sg-06d7fb42f310e57c7 |  False |  80    |  80    |  0.0.0.0/0 |  None                  |
++-----------------------+--------+--------+--------+------------+------------------------+
+
+===== S3 public access block =====
+{"BlockPublicAcls":true,"IgnorePublicAcls":true,"BlockPublicPolicy":true,"RestrictPublicBuckets":true}
+
+===== EBS =====
+vol-0d4c7ba882622ee10	20	True	attached
+
+===== ASG =====
+2	2	4	ELB
+
+===== Health via ALB =====
+{"data":{"db":"up","status":"ok","uptime":344.180787939,"version":"519185e"},"message":"Server is healthy","success":true}
+
+===== Direct to private IP from laptop (must fail) =====
+result=000
+
+===== DB via SSM =====
+
+===== App flow via ALB =====
+{"data":{"note":{"content":"3-tier works","title":"hello from AWS","userId":"6aeb5069875c60edb61e7f27","_id":"6aeb506a7c406ddef8f734dd","createdAt":"2026-11-04T
+index=200 deeplink=200
+
+===== DB via SSM =====
+Success	mongo Up 7 minutes
+/dev/nvme1n1     20G  477M   20G   3% /data
+--- unauthenticated listDatabases:
+MongoServerError: Command listDatabases requires authentication
+--- app user may not use admin db:
+MongoServerError: Command usersInfo requires authentication
+	

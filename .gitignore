@@ -37,3 +37,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.local
+
+# AWS credentials (never commit)
+*accessKeys*.csv
+*credentials*.csv
+
+# Terraform plan files
+*tfplan

@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/db-user-data.log) 2>&1
+REGION=${region}
+P=/notes-app/prod
+dnf install -y docker
+systemctl enable --now docker
+
+# 1. Wait for the EBS data volume (attached after boot) and find it by its ID
+DEV=/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${replace(volume_id, "-", "")}
+for i in $(seq 1 60); do [ -e "$DEV" ] && break; sleep 5; done
+[ -e "$DEV" ] || { echo "data volume not found"; exit 1; }
+
+# 2. Format ONLY if empty (never wipe existing data), then mount persistently
+blkid "$DEV" || mkfs -t xfs "$DEV"
+mkdir -p /data
+UUID=$(blkid -s UUID -o value "$DEV")
+grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data xfs defaults,nofail 0 2" >> /etc/fstab
+mount -a
+mkdir -p /data/mongo /opt/mongo-init
+
+# 3. Secrets from SSM (kept out of the log: no xtrace anywhere in this script)
+get() { aws ssm get-parameter --region "$REGION" --with-decryption --name "$P/$1" --query Parameter.Value --output text; }
+export MONGO_ROOT_USER=$(get MONGO_ROOT_USERNAME) MONGO_ROOT_PW=$(get MONGO_ROOT_PASSWORD)
+export MONGO_APP_USER=$(get MONGO_APP_USERNAME)  MONGO_APP_PW=$(get MONGO_APP_PASSWORD)
+
+# 4. Init script creates a least-privilege app user (readWrite on "notes" only)
+cat > /opt/mongo-init/01-app-user.js <<'JS'
+db.getSiblingDB('notes').createUser({
+  user: process.env.MONGO_APP_USER,
+  pwd: process.env.MONGO_APP_PW,
+  roles: [{ role: 'readWrite', db: 'notes' }]
+});
+JS
+
+# 5. Run MongoDB (init scripts run only on an empty data dir)
+docker rm -f mongo 2>/dev/null || true
+docker run -d --name mongo --restart unless-stopped \
+  -p 27017:27017 \
+  -v /data/mongo:/data/db \
+  -v /opt/mongo-init:/docker-entrypoint-initdb.d:ro \
+  -e MONGO_INITDB_ROOT_USERNAME="$MONGO_ROOT_USER" \
+  -e MONGO_INITDB_ROOT_PASSWORD="$MONGO_ROOT_PW" \
+  -e MONGO_APP_USER -e MONGO_APP_PW \
+  --log-driver awslogs --log-opt awslogs-region="$REGION" --log-opt awslogs-group=/notes-app/db \
+  mongo:7.0 --wiredTigerCacheSizeGB 0.5

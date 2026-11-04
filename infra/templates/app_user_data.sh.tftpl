@@ -1,0 +1,20 @@
+#!/bin/bash
+set -euxo pipefail
+exec > >(tee /var/log/app-user-data.log) 2>&1
+
+dnf install -y docker
+systemctl enable --now docker
+
+# Docker Compose v2 plugin (AL2023 has no package); pinned release, x86_64
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+docker compose version
+
+mkdir -p /opt/notes-app
+echo "${compose_b64}" | base64 -d > /opt/notes-app/docker-compose.prod.yml
+echo "${deploy_b64}" | base64 -d > /opt/notes-app/deploy.sh
+chmod +x /opt/notes-app/deploy.sh
+
+/opt/notes-app/deploy.sh

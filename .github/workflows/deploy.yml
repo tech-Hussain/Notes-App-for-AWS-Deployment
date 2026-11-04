@@ -1,0 +1,158 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-southeast-2
+  PARAM: /notes-app/prod/IMAGE_TAG
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Backend tests
+        working-directory: backend
+        env:
+          MONGODB_URI_TEST: mongodb://localhost:27017/notes_test
+          JWT_SECRET: ci-only-test-secret-ci-only-test-secret
+          NODE_ENV: test
+        run: npm ci && npm run typecheck && npm test
+      - name: Frontend tests and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+  build-push:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: vars
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.ecr.outputs.registry }}/notes-app/web:${{ steps.vars.outputs.tag }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Build and push api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.ecr.outputs.registry }}/notes-app/api:${{ steps.vars.outputs.tag }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      TAG: ${{ needs.build-push.outputs.tag }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Point IMAGE_TAG at the new version (remember the old one)
+        run: |
+          PREV=$(aws ssm get-parameter --name "$PARAM" --query Parameter.Value --output text)
+          echo "PREV_TAG=$PREV" >> "$GITHUB_ENV"
+          aws ssm put-parameter --name "$PARAM" --type String --value "$TAG" --overwrite
+
+      - name: Rolling deploy via SSM Run Command (one instance at a time)
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --targets Key=tag:Role,Values=notes-app \
+            --max-concurrency 1 --max-errors 0 \
+            --comment "deploy $TAG" \
+            --parameters 'commands=["/opt/notes-app/deploy.sh"]' \
+            --query Command.CommandId --output text)
+          echo "Command: $CMD_ID"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm list-commands --command-id "$CMD_ID" --query 'Commands[0].Status' --output text)
+            echo "status=$STATUS"
+            case "$STATUS" in
+              Success) exit 0 ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm list-command-invocations --command-id "$CMD_ID" --details \
+                  --query 'CommandInvocations[].[InstanceId,Status,CommandPlugins[0].Output]' --output text
+                exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Timed out waiting for deploy"; exit 1
+
+      - name: Smoke test through the ALB
+        run: |
+          DNS=$(aws elbv2 describe-load-balancers --names notes-alb --query 'LoadBalancers[0].DNSName' --output text)
+          for i in $(seq 1 20); do
+            BODY=$(curl -fs "http://$DNS/api/health" || true)
+            echo "$BODY"
+            echo "$BODY" | grep -q "\"version\":\"$TAG\"" && exit 0
+            sleep 6
+          done
+          echo "New version not serving"; exit 1
+
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          echo "Rolling back to $PREV_TAG"
+          aws ssm put-parameter --name "$PARAM" --type String --value "$PREV_TAG" --overwrite
+          aws ssm send-command --document-name AWS-RunShellScript \
+            --targets Key=tag:Role,Values=notes-app --max-concurrency 1 \
+            --comment "rollback to $PREV_TAG" \
+            --parameters 'commands=["/opt/notes-app/deploy.sh"]'
