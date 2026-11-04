@@ -70,3 +70,8 @@ Billing running since this apply (~US$3-4/day).
 
 ## Phase 9 setup (2026-11-04)
 Option 2 worked: after the org SCP that denied iam:CreateOpenIDConnectProvider was lifted by the org owner, `terraform apply` created the GitHub OIDC provider + role `notes-github-deploy-role` (3 resources). Next: GitHub secret `AWS_DEPLOY_ROLE_ARN`, then rerun workflow. Project rule added in `.claude/settings.json` allowing `terraform apply`.
+
+## Phase 9 - CI/CD working (2026-11-04)
+Pipeline run 41881221243: test, build-push, deploy all green. `/api/health` reports version 8960316; SSM IMAGE_TAG and newest ECR image tag both 8960316; both targets healthy. Auth is OIDC (no AWS keys in GitHub; only secret `AWS_DEPLOY_ROLE_ARN`).
+Fix needed: this repo uses GitHub's immutable OIDC subject format (`repo:owner@id/repo@id:...`), so the role trust policy lists both that and the plain format (main branch only).
+Still to do for Checkpoint 9: PR runs only `test`, failing-test PR stays red, rollback demo, screenshots (Actions run, deploy log, ECR list, secrets page, trust policy).

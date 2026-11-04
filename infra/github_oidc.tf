@@ -23,7 +23,11 @@ data "aws_iam_policy_document" "github_assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+      values = [
+        "repo:${var.github_repo}:ref:refs/heads/main",
+        # GitHub's immutable-subject format (owner@id/repo@id) used by this repository
+        "repo:tech-Hussain@75562191/Notes-App-for-AWS-Deployment@1445283008:ref:refs/heads/main",
+      ]
     }
   }
 }
