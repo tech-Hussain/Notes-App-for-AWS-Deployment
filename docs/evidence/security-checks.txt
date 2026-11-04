@@ -1,0 +1,29 @@
+1. DB private IP from internet (must fail):
+   result=000 (000 = unreachable)
+   app instance private IP:
+   result=000
+2. ALB port 5000 (must fail):
+   result=000
+3. /.env returns SPA index, not a file:
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-w
+4. API without token:
+   result=401
+5. Public IPs on instances / port 22 rules:
+i-04025885092273b0e	None
+i-03917de85ac41a234	None
+i-0bd68fae299bb3a4b	None
+i-05192dfbeeda0bc3c	None
+i-06719c5d50e53503c	None
+   SG rules on port 22: 0
+6. App instance role reading the DB root password (must be AccessDenied):
+    }
+}
+
+   
+6. App instance role (after fix; first test FAILED least privilege because AmazonSSMManagedInstanceCore allowed it, fixed with explicit Deny):
+root password -> DENIED (AccessDeniedException)
+own MONGO_URI    -> /notes-app/prod/MONGO_URI

@@ -1,0 +1,10 @@
+23:53:02 rebooting DB i-0bd68fae299bb3a4b
+23:53:07 http=503
+23:53:13 http=503
+23:53:18 http=503
+23:53:24 http=503
+23:53:30 http=503
+23:53:36 http=503
+23:53:42 http=200
+first non-200 at +5s, recovered at +40s => downtime ~35s
+"total":1

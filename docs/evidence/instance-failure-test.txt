@@ -1,0 +1,11 @@
+23:48:25 terminating i-04025885092273b0e
+shutting-down
+23:48:38 http=502 healthy_targets=2 asg_instances=2
+23:49:10 http=200 healthy_targets=1 asg_instances=2
+23:49:42 http=200 healthy_targets=1 asg_instances=2
+23:50:13 http=200 healthy_targets=1 asg_instances=2
+23:50:45 http=200 healthy_targets=1 asg_instances=3
+23:51:17 http=200 healthy_targets=1 asg_instances=2
+23:51:49 http=200 healthy_targets=1 asg_instances=2
+23:52:21 http=200 healthy_targets=1 asg_instances=2
+23:52:53 http=200 healthy_targets=2 asg_instances=2

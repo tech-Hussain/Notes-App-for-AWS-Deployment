@@ -23,6 +23,11 @@ resource "aws_iam_role_policy" "app" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Effect   = "Deny"
+        Action   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+        Resource = ["${local.ssm_prefix}/MONGO_ROOT_*", "${local.ssm_prefix}/MONGO_APP_*"]
+      },
       { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
       {
         Effect   = "Allow"
@@ -62,6 +67,11 @@ resource "aws_iam_role_policy" "db" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Effect   = "Deny"
+        Action   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+        Resource = ["${local.ssm_prefix}/JWT_SECRET", "${local.ssm_prefix}/MONGO_URI", "${local.ssm_prefix}/IMAGE_TAG"]
+      },
       {
         Effect = "Allow"
         Action = ["ssm:GetParameter", "ssm:GetParameters"]

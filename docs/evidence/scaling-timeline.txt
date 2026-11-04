@@ -1,0 +1,41 @@
+23:23:32 cpu=4.162272208727122 desired/instances=2/2
+23:24:08 cpu=5.656146763022117 desired/instances=2/2
+23:24:44 cpu=5.586221034971338 desired/instances=2/2
+23:25:20 cpu=5.4957235426041 desired/instances=2/3
+23:27:16 cpu=5.4957235426041 desired/instances=
+23:27:59 cpu=13.683735521722888 desired/instances=2/2
+23:28:36 cpu=10.798580889889584 desired/instances=2/2
+23:29:16 cpu=10.798580889889584 desired/instances=2/2
+23:29:52 cpu=9.74612555416986 desired/instances=2/2
+23:30:31 cpu=9.047836020911609 desired/instances=2/2
+23:31:07 cpu=9.047836020911609 desired/instances=2/2
+23:31:43 cpu=5.889580232911894 desired/instances=2/2
+23:32:19 cpu=4.187942577837397 desired/instances=2/2
+23:32:55 cpu=3.332908327946658 desired/instances=2/2
+--- CPU stress started 23:33 (yes x2 per app instance, 10 min)
+23:33:31 cpu=2.499840735174432 desired/instances=2/2
+23:34:06 cpu=2.499840735174432 desired/instances=2/2
+23:34:08 cpu=2.499840735174432 desired/instances=2/2
+23:34:52 cpu=24.71317028908647 desired/instances=2/2
+23:35:38 cpu=39.769201753656404 desired/instances=2/2
+23:36:24 cpu=100.0 desired/instances=2/2
+23:37:10 cpu=100.0 desired/instances=2/2
+23:37:57 cpu=99.97916666666666 desired/instances=2/2
+23:38:43 cpu=99.98472222222222 desired/instances=2/2
+23:39:28 cpu=99.9872933647623 desired/instances=2/2
+23:40:14 cpu=99.9872933647623 desired/instances=4/4
+23:41:00 cpu=99.96066802514318 desired/instances=4/4
+23:41:47 cpu=99.99251173162045 desired/instances=4/4
+23:42:33 cpu=99.99625586581023 desired/instances=4/4
+23:43:19 cpu=99.99625586581023 desired/instances=4/4
+23:47:24 desired/instances=2/3
+23:48:07 desired/instances=2/2
+2026-11-04T18:45:38.279000+00:00	Successful	Terminating EC2 instance: i-03917de85ac41a234
+2026-11-04T18:45:38.154000+00:00	Successful	Terminating EC2 instance: i-06719c5d50e53503c
+2026-11-04T18:39:17.602000+00:00	Successful	Launching a new EC2 instance: i-03917de85ac41a234
+2026-11-04T18:39:17.572000+00:00	Successful	Launching a new EC2 instance: i-05192dfbeeda0bc3c
+2026-11-04T18:24:23.923000+00:00	Successful	Launching a new EC2 instance: i-06719c5d50e53503c
+2026-11-04T18:24:22.423000+00:00	Successful	Terminating EC2 instance: i-08851bd08cc236075
+2026-11-04T15:26:15.217000+00:00	Successful	Launching a new EC2 instance: i-04025885092273b0e
+2026-11-04T15:26:15.145000+00:00	Successful	Launching a new EC2 instance: i-08851bd08cc236075
+None
