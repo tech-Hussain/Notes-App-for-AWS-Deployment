@@ -1,0 +1,10 @@
+Success	restoring notes-20261104T181657Z.archive.gz
+2026-11-04T18:17:42.218+0000	index: &idx.IndexDocument{Options:bson.M{"background":true, "name":"userId_1_updatedAt_-1", "v":2}, Key:bson.D{bson.E{Key:"userId", Value:1}, bson.E{Key:"updatedAt", Value:-1}}, PartialFilterExpression:(*bson.D)(nil)}
+2026-11-04T18:17:42.282+0000	2 document(s) restored successfully. 0 document(s) failed to restore.
+tokenrevocations: notes=0 notes_restore=0
+users: notes=1 notes_restore=1
+notes: notes=1 notes_restore=1
+NEXT                        LEFT     LAST PASSED UNIT               ACTIVATES
+Thu 2026-11-05 16:00:00 UTC 21h left -    -      mongo-backup.timer mongo-backup.service
+
+	

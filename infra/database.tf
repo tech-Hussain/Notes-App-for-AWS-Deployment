@@ -17,10 +17,16 @@ resource "aws_instance" "db" {
   user_data = templatefile("${path.module}/templates/db_user_data.sh.tftpl", {
     region    = var.region
     volume_id = aws_ebs_volume.mongo_data.id
+    bucket    = aws_s3_bucket.backups.id
   })
-  user_data_replace_on_change = true
-  tags                        = { Name = "notes-mongodb", Role = "notes-db" }
-  depends_on                  = [aws_route_table_association.db, aws_nat_gateway.nat, aws_cloudwatch_log_group.app]
+  # The backup timer was added after first boot and is installed on the live instance via SSM;
+  # new instances (rebuilds) get it from the template. Avoids replacing the running database.
+  user_data_replace_on_change = false
+  lifecycle {
+    ignore_changes = [user_data]
+  }
+  tags       = { Name = "notes-mongodb", Role = "notes-db" }
+  depends_on = [aws_route_table_association.db, aws_nat_gateway.nat, aws_cloudwatch_log_group.app]
 }
 
 resource "aws_ebs_volume" "mongo_data" {

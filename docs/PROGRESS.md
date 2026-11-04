@@ -79,3 +79,8 @@ Still to do for Checkpoint 9: PR runs only `test`, failing-test PR stays red, ro
 ## Checkpoint 9 demos (2026-11-04)
 - PR with a deliberately failing test (PR #1, closed unmerged): only `test` ran, it went red, build-push and deploy were skipped.
 - Rollback demo: commit 0783248 changed the API container to crash on start (tests and build pass). Deploy job: rolling SSM deploy step failed, `Roll back on failure` step succeeded, IMAGE_TAG restored to d3bed6c, both targets healthy again. One sampled 502 (~20 s window) while the first instance was being switched; the other instance stayed healthy. Availability log: docs/evidence/rollback-availability.txt. Broken commit then reverted.
+
+## Phase 10 - Monitoring and backups (2026-11-04)
+SNS topic `notes-alerts` (email subscription PENDING CONFIRMATION by user), 6 CloudWatch alarms (unhealthy hosts, target 5xx, latency p90, ASG CPU, DB system status with EC2 recover action, DB CPU), dashboard `notes-app`. Log groups /notes-app/{web,api,db} with one stream per container; api group has streams from both instances.
+Backup: `mongo-backup.service` + nightly timer (16:00 UTC = 21:00 PKT) installed on the live DB via SSM (user data template also updated for rebuilds; DB `ignore_changes=[user_data]` to avoid replacing the running DB). Manual run created s3://notes-app-backups-<ACCT>/mongo/notes-20261104T181657Z.archive.gz. Restore test into `notes_restore`: users 1=1, notes 1=1 (docs/evidence/backup-restore-test.txt).
+Fix: EC2 recover alarm action requires metric StatusCheckFailed_System.

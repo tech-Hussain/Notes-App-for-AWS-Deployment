@@ -44,3 +44,40 @@ docker run -d --name mongo --restart unless-stopped \
   -e MONGO_APP_USER -e MONGO_APP_PW \
   --log-driver awslogs --log-opt awslogs-region="$REGION" --log-opt awslogs-group=/notes-app/db \
   mongo:7.0 --wiredTigerCacheSizeGB 0.5
+
+# 6. Nightly backup to S3 (systemd timer; AL2023 has no cron)
+cat > /usr/local/bin/mongo-backup.sh <<'SH'
+#!/bin/bash
+set -euo pipefail
+REGION=${region}
+BUCKET=${bucket}
+P=/notes-app/prod
+get() { aws ssm get-parameter --region $REGION --with-decryption --name "$P/$1" --query Parameter.Value --output text; }
+TS=$(date -u +%Y%m%dT%H%M%SZ)
+docker exec -e U="$(get MONGO_ROOT_USERNAME)" -e PW="$(get MONGO_ROOT_PASSWORD)" mongo \
+  sh -c 'mongodump -u "$U" -p "$PW" --authenticationDatabase admin --db notes --archive --gzip' \
+  | aws s3 cp - "s3://$BUCKET/mongo/notes-$TS.archive.gz" --region $REGION
+echo "backup ok: notes-$TS.archive.gz"
+SH
+chmod 700 /usr/local/bin/mongo-backup.sh
+
+cat > /etc/systemd/system/mongo-backup.service <<'UNIT'
+[Unit]
+Description=MongoDB backup to S3
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mongo-backup.sh
+UNIT
+
+cat > /etc/systemd/system/mongo-backup.timer <<'UNIT'
+[Unit]
+Description=Nightly MongoDB backup
+[Timer]
+OnCalendar=*-*-* 16:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now mongo-backup.timer
