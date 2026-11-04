@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files / secrets (examples are allowed)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Build output
+dist/
+build/
+
+# Test / analysis output
+coverage/
+.nyc_output/
+.scannerwork/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Terraform (for later phases)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.local

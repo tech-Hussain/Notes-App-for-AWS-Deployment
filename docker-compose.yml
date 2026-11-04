@@ -1,0 +1,39 @@
+services:
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"          # the ONLY published port
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [frontend]
+
+  api:
+    build: ./backend
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/notes
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [frontend, backend]   # no ports: not reachable from the host
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]             # web cannot reach the database
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  mongo-data:
