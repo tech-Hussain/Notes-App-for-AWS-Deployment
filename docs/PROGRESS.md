@@ -75,3 +75,7 @@ Option 2 worked: after the org SCP that denied iam:CreateOpenIDConnectProvider w
 Pipeline run 41881221243: test, build-push, deploy all green. `/api/health` reports version 8960316; SSM IMAGE_TAG and newest ECR image tag both 8960316; both targets healthy. Auth is OIDC (no AWS keys in GitHub; only secret `AWS_DEPLOY_ROLE_ARN`).
 Fix needed: this repo uses GitHub's immutable OIDC subject format (`repo:owner@id/repo@id:...`), so the role trust policy lists both that and the plain format (main branch only).
 Still to do for Checkpoint 9: PR runs only `test`, failing-test PR stays red, rollback demo, screenshots (Actions run, deploy log, ECR list, secrets page, trust policy).
+
+## Checkpoint 9 demos (2026-11-04)
+- PR with a deliberately failing test (PR #1, closed unmerged): only `test` ran, it went red, build-push and deploy were skipped.
+- Rollback demo: commit 0783248 changed the API container to crash on start (tests and build pass). Deploy job: rolling SSM deploy step failed, `Roll back on failure` step succeeded, IMAGE_TAG restored to d3bed6c, both targets healthy again. One sampled 502 (~20 s window) while the first instance was being switched; the other instance stayed healthy. Availability log: docs/evidence/rollback-availability.txt. Broken commit then reverted.
