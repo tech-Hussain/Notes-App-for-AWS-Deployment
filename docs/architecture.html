@@ -1,0 +1,121 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Architecture</title>
+<style>
+  body{margin:0;background:#fff;font-family:Segoe UI,Arial,sans-serif}
+  text{font-size:13px;fill:#1f2937}
+  .t{font-weight:600}
+  .s{font-size:11px;fill:#4b5563}
+  .box{fill:#fff;stroke:#374151;stroke-width:1.5;rx:6}
+  .svc{fill:#fff7ed;stroke:#c2410c;stroke-width:1.5;rx:6}
+  .app{fill:#eff6ff;stroke:#1d4ed8;stroke-width:1.5;rx:6}
+  .db{fill:#f0fdf4;stroke:#15803d;stroke-width:1.5;rx:6}
+  .pub{fill:#f0f9ff;stroke:#0369a1;stroke-width:1.5;rx:8}
+  .priv{fill:#f5f3ff;stroke:#6d28d9;stroke-width:1.5;rx:8}
+  .pdb{fill:#ecfdf5;stroke:#047857;stroke-width:1.5;rx:8}
+  .sg{fill:none;stroke:#dc2626;stroke-width:1.6;stroke-dasharray:6 4;rx:8}
+  .az{fill:#fafafa;stroke:#9ca3af;stroke-width:1.2;stroke-dasharray:3 3;rx:8}
+  .arrow{stroke:#111827;stroke-width:1.8;fill:none;marker-end:url(#a)}
+  .carrow{stroke:#c2410c;stroke-width:1.5;fill:none;marker-end:url(#c);stroke-dasharray:5 3}
+  .sgt{fill:#dc2626;font-size:11px;font-weight:600}
+</style></head><body>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1010" viewBox="0 0 1500 1010">
+<defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#111827"/></marker>
+  <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c2410c"/></marker>
+</defs>
+<text x="20" y="28" class="t" style="font-size:18px">NoteNest (MERN) on AWS: 3-tier, 2 Availability Zones, region ap-southeast-2 (Sydney)</text>
+
+<!-- Internet / users -->
+<rect x="40" y="50" width="150" height="46" class="box"/><text x="115" y="78" text-anchor="middle" class="t">Users (browser)</text>
+<!-- GitHub -->
+<rect x="1000" y="50" width="170" height="46" class="box"/><text x="1085" y="70" text-anchor="middle" class="t">GitHub repo</text><text x="1085" y="86" text-anchor="middle" class="s">push to main</text>
+<rect x="1220" y="50" width="240" height="46" class="box"/><text x="1340" y="70" text-anchor="middle" class="t">GitHub Actions</text><text x="1340" y="86" text-anchor="middle" class="s">test → build → push → deploy</text>
+<path d="M1170 73H1220" class="arrow"/>
+
+<!-- AWS cloud / region / VPC -->
+<rect x="20" y="115" width="1460" height="880" rx="10" fill="none" stroke="#f59e0b" stroke-width="2"/>
+<text x="32" y="135" class="t" style="fill:#b45309">AWS Cloud · Region ap-southeast-2</text>
+<rect x="35" y="145" width="1010" height="835" rx="10" fill="none" stroke="#2563eb" stroke-width="2"/>
+<text x="47" y="165" class="t" style="fill:#1d4ed8">VPC notes-vpc · 10.0.0.0/16</text>
+
+<!-- IGW -->
+<rect x="410" y="175" width="170" height="34" class="svc"/><text x="495" y="197" text-anchor="middle" class="t">Internet Gateway</text>
+<path d="M115 96V192H410" class="arrow"/>
+
+<!-- AZ columns -->
+<rect x="60" y="225" width="475" height="740" class="az"/><text x="72" y="244" class="t">Availability Zone ap-southeast-2a</text>
+<rect x="545" y="225" width="475" height="740" class="az"/><text x="557" y="244" class="t">Availability Zone ap-southeast-2b</text>
+
+<!-- Public subnets -->
+<rect x="75" y="255" width="445" height="135" class="pub"/><text x="85" y="273" class="t">Public subnet 10.0.1.0/24</text>
+<rect x="560" y="255" width="445" height="135" class="pub"/><text x="570" y="273" class="t">Public subnet 10.0.2.0/24</text>
+<rect x="95" y="290" width="200" height="80" class="svc"/><text x="195" y="318" text-anchor="middle" class="t">ALB node</text><text x="195" y="336" text-anchor="middle" class="s">HTTP :80 (public)</text>
+<rect x="320" y="290" width="180" height="80" class="svc"/><text x="410" y="318" text-anchor="middle" class="t">NAT Gateway</text><text x="410" y="336" text-anchor="middle" class="s">+ Elastic IP (1 for both AZs)</text>
+<rect x="580" y="290" width="200" height="80" class="svc"/><text x="680" y="318" text-anchor="middle" class="t">ALB node</text><text x="680" y="336" text-anchor="middle" class="s">HTTP :80 (public)</text>
+<rect x="88" y="283" width="215" height="94" class="sg"/><text x="95" y="388" class="sgt" style="font-size:10px">notes-alb-sg: 80 from 0.0.0.0/0</text>
+<path d="M495 209V250" class="arrow" style="stroke-dasharray:0"/>
+
+<!-- ALB label & TG -->
+<rect x="250" y="398" width="520" height="36" rx="6" fill="#fff7ed" stroke="#c2410c" stroke-width="1.5"/>
+<text x="510" y="421" text-anchor="middle" class="t">Application Load Balancer notes-alb → Target group notes-web-tg (health /api/health)</text>
+<path d="M195 370V398" class="arrow"/><path d="M680 370V398" class="arrow"/>
+
+<!-- App subnets -->
+<rect x="75" y="460" width="445" height="215" class="priv"/><text x="85" y="478" class="t">Private app subnet 10.0.11.0/24</text>
+<rect x="560" y="460" width="445" height="215" class="priv"/><text x="570" y="478" class="t">Private app subnet 10.0.12.0/24</text>
+<rect x="95" y="492" width="405" height="170" class="app"/><text x="297" y="512" text-anchor="middle" class="t">EC2 t3.micro (Auto Scaling Group 2–4)</text>
+<rect x="110" y="525" width="180" height="62" class="box"/><text x="200" y="548" text-anchor="middle" class="t">Nginx container</text><text x="200" y="566" text-anchor="middle" class="s">React build, /api proxy · :80</text>
+<rect x="305" y="525" width="180" height="62" class="box"/><text x="395" y="548" text-anchor="middle" class="t">API container</text><text x="395" y="566" text-anchor="middle" class="s">Node/Express :5000 (no host port)</text>
+<path d="M290 556H305" class="arrow"/>
+<text x="110" y="612" class="s">Docker network "frontend" · IMDSv2 · non-root · no public IP</text>
+<text x="110" y="630" class="s">Deploy via SSM Run Command (no SSH, no port 22)</text>
+<rect x="88" y="485" width="420" height="184" class="sg"/><text x="95" y="657" class="sgt" style="font-size:10px">notes-app-sg: 80 from notes-alb-sg only</text>
+
+<rect x="580" y="492" width="405" height="170" class="app"/><text x="782" y="512" text-anchor="middle" class="t">EC2 t3.micro (Auto Scaling Group 2–4)</text>
+<rect x="595" y="525" width="180" height="62" class="box"/><text x="685" y="548" text-anchor="middle" class="t">Nginx container</text><text x="685" y="566" text-anchor="middle" class="s">React build, /api proxy · :80</text>
+<rect x="790" y="525" width="180" height="62" class="box"/><text x="880" y="548" text-anchor="middle" class="t">API container</text><text x="880" y="566" text-anchor="middle" class="s">Node/Express :5000 (no host port)</text>
+<path d="M775 556H790" class="arrow"/>
+<text x="595" y="612" class="s">Same instance profile: least-privilege IAM role</text>
+<rect x="573" y="485" width="420" height="184" class="sg"/><text x="580" y="657" class="sgt" style="font-size:10px">notes-app-sg: 80 from notes-alb-sg only</text>
+<path d="M195 434V492" class="arrow"/><path d="M680 434V492" class="arrow"/>
+
+<!-- DB subnets -->
+<rect x="75" y="730" width="445" height="165" class="pdb"/><text x="85" y="748" class="t">Private DB subnet 10.0.21.0/24</text>
+<rect x="560" y="730" width="445" height="165" class="pdb"/><text x="570" y="748" class="t">Private DB subnet 10.0.22.0/24 (reserved)</text>
+<rect x="95" y="765" width="230" height="110" class="db"/><text x="210" y="790" text-anchor="middle" class="t">MongoDB 7 EC2 t3.small</text><text x="210" y="808" text-anchor="middle" class="s">10.0.21.10 · auth enabled · no public IP</text><text x="210" y="826" text-anchor="middle" class="s">nightly mongodump → S3 (systemd timer)</text>
+<rect x="345" y="780" width="150" height="80" class="db"/><text x="420" y="805" text-anchor="middle" class="t">EBS gp3 20 GiB</text><text x="420" y="823" text-anchor="middle" class="s">encrypted, /data</text>
+<path d="M325 820H345" class="arrow"/>
+<rect x="88" y="758" width="415" height="124" class="sg"/><text x="95" y="893" class="sgt" style="font-size:10px">notes-db-sg: 27017 from notes-app-sg only</text>
+<text x="580" y="800" class="s">Spare subnet for a future replica or DocumentDB</text>
+<path d="M297 662V760" class="arrow"/><text x="312" y="715" class="s" style="fill:#fff;stroke:#fff;stroke-width:4">mongodb :27017</text><text x="312" y="715" class="s">mongodb :27017</text>
+<path d="M880 662V705H300" class="arrow" style="stroke-dasharray:4 3"/>
+
+<!-- Private route via NAT, S3 endpoint -->
+<rect x="410" y="925" width="200" height="34" class="svc"/><text x="510" y="947" text-anchor="middle" class="t">S3 gateway endpoint (free)</text>
+<text x="70" y="955" class="s">Private route table: 0.0.0.0/0 → NAT; S3 → endpoint</text>
+
+
+<!-- Regional services right column -->
+<rect x="1060" y="145" width="405" height="835" rx="10" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="1072" y="165" class="t">Regional services</text>
+<rect x="1080" y="185" width="365" height="62" class="svc"/><text x="1262" y="210" text-anchor="middle" class="t">Amazon ECR</text><text x="1262" y="228" text-anchor="middle" class="s">notes-app/web, notes-app/api · immutable SHA tags · scan on push</text>
+<rect x="1080" y="265" width="365" height="62" class="svc"/><text x="1262" y="290" text-anchor="middle" class="t">SSM Parameter Store + Run Command</text><text x="1262" y="308" text-anchor="middle" class="s">SecureString secrets under /notes-app/prod/*</text>
+<rect x="1080" y="345" width="365" height="62" class="svc"/><text x="1262" y="370" text-anchor="middle" class="t">IAM</text><text x="1262" y="388" text-anchor="middle" class="s">app role · db role · GitHub OIDC deploy role</text>
+<rect x="1080" y="425" width="365" height="78" class="svc"/><text x="1262" y="450" text-anchor="middle" class="t">CloudWatch</text><text x="1262" y="468" text-anchor="middle" class="s">log groups web/api/db · dashboard · 6 alarms</text><text x="1262" y="486" text-anchor="middle" class="s">→ SNS topic notes-alerts → email</text>
+<rect x="1080" y="521" width="365" height="62" class="svc"/><text x="1262" y="546" text-anchor="middle" class="t">S3 bucket notes-app-backups</text><text x="1262" y="564" text-anchor="middle" class="s">private, versioned, SSE-S3, lifecycle 30 d IA / 90 d expire</text>
+<rect x="1080" y="601" width="365" height="62" class="svc"/><text x="1262" y="626" text-anchor="middle" class="t">Terraform (local state)</text><text x="1262" y="644" text-anchor="middle" class="s">all infrastructure as code in infra/</text>
+<rect x="1080" y="681" width="365" height="108" rx="6" fill="#fff" stroke="#9ca3af"/>
+<text x="1092" y="702" class="t">Legend</text>
+<path d="M1092 718H1140" class="arrow"/><text x="1150" y="722" class="s">request / data flow</text>
+<path d="M1092 740H1140" class="carrow"/><text x="1150" y="744" class="s">outbound via NAT</text>
+<rect x="1092" y="752" width="48" height="14" class="sg"/><text x="1150" y="763" class="s">security group boundary</text>
+<rect x="1092" y="772" width="48" height="12" class="az"/><text x="1150" y="782" class="s">Availability Zone</text>
+
+<!-- CI/CD arrows -->
+<path d="M1340 96V175H1445" class="carrow" style="stroke-dasharray:0"/><text x="1100" y="112" class="s">OIDC role (no stored keys)</text>
+<path d="M1395 96V265" class="carrow" style="stroke-dasharray:0"/><text x="1210" y="160" class="s" text-anchor="end">push images</text><text x="1405" y="215" class="s">deploy:</text><text x="1405" y="229" class="s">Run Command</text>
+<path d="M1262 247V265" class="arrow"/>
+<path d="M1080 296H1000" class="carrow"/><text x="1005" y="288" class="s">secrets, pull images</text>
+<path d="M1080 216H1015V540H995" class="carrow"/>
+</svg>
+</body></html>

@@ -92,3 +92,7 @@ Fix: EC2 recover alarm action requires metric StatusCheckFailed_System.
 - DB reboot: /api/health 503 for ~35 s then recovered on its own; data intact (docs/evidence/db-reboot-test.txt). Known SPOF.
 - Security checks (docs/evidence/security-checks.txt): private IPs unreachable, ALB :5000 closed, /.env returns SPA index, no-token API 401, no public IPs, no SG rule on port 22.
 - FINDING + FIX: the app instance role could read the DB root password because AmazonSSMManagedInstanceCore grants broader SSM read than the inline policy. Fixed with explicit Deny statements (app role denied MONGO_ROOT_*/MONGO_APP_*; DB role denied JWT_SECRET/MONGO_URI/IMAGE_TAG). Re-test: AccessDenied for the root password, own MONGO_URI still readable, app healthy.
+
+## Phases 12-13 (2026-11-04)
+Cost estimate written from AWS Price List API data (docs/COST-ESTIMATE.md): about US$127/month always-on; top drivers NAT, EC2, ALB; three optimizations. Architecture diagram (docs/architecture.png, source architecture.html), 5-page technical report (docs/Technical-Report.pdf, source REPORT.html), README deployment section, docs/TRACEABILITY.md.
+Outstanding for the owner: confirm the SNS subscription email, AWS console screenshots (14), Pricing Calculator export, then decide on teardown.

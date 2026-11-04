@@ -672,3 +672,22 @@ Access the local SonarQube dashboard at `http://localhost:9000` (default credent
 - **Backend Test Suite**: Verified passing
 - **Frontend Test Suite**: Verified passing
 - **SonarQube Quality Gate**: Configured and documented in `sonar-project.properties`
+
+---
+
+## AWS deployment (CEA SE-490)
+
+- **Repository:** https://github.com/tech-Hussain/Notes-App-for-AWS-Deployment
+- **Live URL (only while the stack is running):** http://notes-alb-42424767.ap-southeast-2.elb.amazonaws.com
+- **Architecture:** [docs/architecture.png](docs/architecture.png) · **Report:** [docs/Technical-Report.pdf](docs/Technical-Report.pdf) · **Cost:** [docs/COST-ESTIMATE.md](docs/COST-ESTIMATE.md) · **Progress log:** [docs/PROGRESS.md](docs/PROGRESS.md) · **Traceability:** [docs/TRACEABILITY.md](docs/TRACEABILITY.md)
+
+**Run locally (Docker):** copy `.env.example` to `.env`, set `JWT_SECRET` (`openssl rand -hex 32`), then `docker compose up --build` and open http://localhost:8080.
+
+**Deploy to AWS:**
+1. Configure AWS CLI profile `notes-admin` (region `ap-southeast-2`).
+2. `cd infra && terraform init && terraform apply -target=aws_ecr_repository.repo`
+3. Build and push images to ECR, run `scripts/create-ssm-params.sh` (creates the secrets in SSM).
+4. `terraform apply` (creates VPC, ALB, ASG, MongoDB, monitoring, IAM). Set `alert_email` in `infra/terraform.tfvars`.
+5. Add the repository secret `AWS_DEPLOY_ROLE_ARN` (output `github_deploy_role_arn`); pushes to `main` then test, build, push and deploy automatically.
+
+**Destroy (stops all hourly billing):** `cd infra && terraform destroy`, then delete the SSM parameters under `/notes-app/prod`.

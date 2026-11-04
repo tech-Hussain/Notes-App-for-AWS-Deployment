@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Technical Report - NoteNest on AWS</title>
+<style>
+  @page{size:A4;margin:16mm 16mm}
+  body{font-family:Segoe UI,Arial,sans-serif;font-size:10.5pt;line-height:1.38;color:#111}
+  h1{font-size:19pt;margin:0 0 2pt}
+  h2{font-size:13pt;margin:14pt 0 4pt;border-bottom:1px solid #999;padding-bottom:2pt;color:#1d3557}
+  h3{font-size:11pt;margin:8pt 0 2pt}
+  p{margin:4pt 0}
+  table{border-collapse:collapse;width:100%;margin:5pt 0;font-size:9.3pt}
+  th,td{border:1px solid #aaa;padding:3pt 5pt;vertical-align:top;text-align:left}
+  th{background:#e8eef5}
+  img{max-width:100%}
+  .sub{color:#444;font-size:10pt;margin-bottom:6pt}
+  ul{margin:3pt 0 3pt 16pt;padding:0}
+  li{margin:1.5pt 0}
+  .pb{page-break-before:always}
+  code{font-family:Consolas,monospace;font-size:9pt}
+</style></head><body>
+
+<h1>NoteNest: a MERN notes application deployed on AWS</h1>
+<div class="sub">CEA SE-490 · Technical report · Syed Muhammad Hussain · Repository: https://github.com/tech-Hussain/Notes-App-for-AWS-Deployment</div>
+
+<h2>1. Cloud provider and justification</h2>
+<p>The application runs on Amazon Web Services in the Asia Pacific (Sydney) region, <code>ap-southeast-2</code>. AWS was chosen for the maturity of the managed building blocks this design needs (a managed Application Load Balancer, Auto Scaling, private networking, a container registry, a secret store, and monitoring), because a new account includes credits and a budget service for cost control, and because GitHub Actions can authenticate to AWS with short-lived OIDC credentials instead of stored keys. Sydney is the region offered by the account's organization and is also one of the three regions its policy allows; the Mumbai region originally planned for latency from Pakistan was not available, so all latency figures in this report include the long path from Pakistan to Sydney.</p>
+
+<h2>2. Architecture and design decisions</h2>
+<p>The app is a React single-page front end and an Express/Node API backed by MongoDB. It runs as two containers per server (Nginx web and Node API) on EC2 instances in private subnets behind a public load balancer, with MongoDB on a separate private instance. Request path: Browser → Application Load Balancer (public subnets, 2 zones) → EC2 instance in a private app subnet → Nginx container (serves the React build and proxies <code>/api/*</code>) → API container on the same Docker network (no published port) → MongoDB instance in a private DB subnet (port 27017, app security group only). Deploys are driven by <code>git push</code> through GitHub Actions.</p>
+<img src="architecture.png" alt="Architecture diagram">
+<table>
+<tr><th>Decision</th><th>Choice</th><th>Why</th></tr>
+<tr><td>Compute</td><td>EC2 + Auto Scaling Group, Docker Compose on each instance</td><td>Matches the brief's "same host with docker-compose" path; simpler than ECS or Kubernetes for a student project.</td></tr>
+<tr><td>Database</td><td>MongoDB 7 in Docker on a private EC2 with a separate encrypted EBS volume</td><td>Keeps the MERN code unchanged; a properly secured self-managed database is allowed; the EBS volume satisfies an enhancement option.</td></tr>
+<tr><td>Registry</td><td>Amazon ECR, immutable tags, scan on push</td><td>IAM-controlled; every image is tagged with the git commit SHA so every deploy is traceable and rollback is just an older tag.</td></tr>
+<tr><td>Secrets</td><td>SSM Parameter Store SecureString</td><td>Encrypted, IAM-scoped, free for standard parameters; values never enter Terraform state or git.</td></tr>
+<tr><td>Deploy</td><td>SSM Run Command, one instance at a time</td><td>No SSH keys and no port 22 anywhere.</td></tr>
+<tr><td>Infrastructure</td><td>Terraform (59+ resources)</td><td>Repeatable, reviewable, and allows nightly teardown to save money.</td></tr>
+</table>
+
+<h2>3. Services used per tier</h2>
+<table>
+<tr><th>Tier</th><th>AWS services</th></tr>
+<tr><td>Network</td><td>VPC 10.0.0.0/16; 2 public, 2 private-app and 2 private-DB subnets across two zones; Internet Gateway; one NAT Gateway; public and private route tables; free S3 gateway endpoint.</td></tr>
+<tr><td>Web</td><td>Application Load Balancer, target group with health check on <code>/api/health</code>, Auto Scaling Group (2–4 t3.micro) with target tracking at 50% CPU; Nginx container.</td></tr>
+<tr><td>App</td><td>Node/Express container on the same instances, reachable only through Nginx.</td></tr>
+<tr><td>Database</td><td>t3.small EC2 running MongoDB 7 with authentication and a least-privilege application user; encrypted gp3 EBS volume.</td></tr>
+<tr><td>Registry / CI-CD</td><td>ECR (two repositories); GitHub Actions authenticating with an OIDC role.</td></tr>
+<tr><td>Monitoring / backup</td><td>CloudWatch log groups, dashboard and 6 alarms, SNS email topic; S3 bucket for nightly MongoDB dumps (private, versioned, encrypted, lifecycle rules).</td></tr>
+<tr><td>Admin / secrets</td><td>SSM Session Manager and Run Command; SSM Parameter Store; IAM roles per tier.</td></tr>
+</table>
+
+<h2 class="pb">4. Containerization and CI/CD</h2>
+<p><b>Containers.</b> The web image is a two-stage build (Node builds the Vite app, then <code>nginx:alpine</code> serves it with gzip, long cache for hashed assets, a SPA fallback and a reverse proxy to the API). The API image is a two-stage build too: TypeScript is compiled in the first stage, and the final stage installs production dependencies only and runs as the non-root <code>node</code> user with a container health check. Locally, <code>docker compose</code> uses two networks so the web container cannot reach MongoDB, and only Nginx publishes a port (8080). On AWS the production compose file publishes only port 80 on the host, which the security group allows from the load balancer alone.</p>
+<p><b>Pipeline.</b> On every push to <code>main</code>: (1) <i>test</i>: backend unit and integration tests against a real MongoDB service container, type-check, front-end tests and build; (2) <i>build-push</i>: images are built for linux/amd64 and pushed to ECR tagged with the short commit SHA; (3) <i>deploy</i>: the new tag is written to an SSM parameter, a rolling SSM Run Command (one instance at a time, stop on first error) runs the deploy script on each server, and a smoke test calls <code>/api/health</code> through the load balancer until it reports the new version. Pull requests run only the test job. If any deploy step fails, a final step restores the previous tag and redeploys it. AWS access uses an OIDC role restricted to this repository's <code>main</code> branch; the only secret stored in GitHub is the role's address.</p>
+
+<h2>5. Security</h2>
+<ul>
+<li><b>Segmentation:</b> security groups chain by reference (internet → ALB group → app group → DB group); the database accepts port 27017 only from the app group; no group opens port 22; no instance has a public IP.</li>
+<li><b>Administration:</b> only SSM Session Manager and Run Command; instance metadata requires IMDSv2 with hop limit 1 so containers cannot read instance credentials.</li>
+<li><b>Least-privilege IAM:</b> separate roles for app servers, the database and the pipeline. <i>A test found a gap:</i> the app role could read the database root password because the AWS-managed SSM policy grants broader read access than my inline policy. I fixed it with explicit deny statements (app role denied the DB credentials; DB role denied the JWT secret and URI) and re-tested: the root password read now returns AccessDenied while the app's own secrets still work.</li>
+<li><b>Secrets:</b> generated random values stored as SecureString parameters, read at deploy time into a mode-600 file; never committed (secret scans of the repository were clean).</li>
+<li><b>Encryption and images:</b> EBS volumes and the backup bucket are encrypted; the bucket blocks all public access and denies non-TLS requests; ECR scans on push and tags are immutable.</li>
+</ul>
+
+<h2>6. Testing results</h2>
+<table>
+<tr><th>Test</th><th>Result</th></tr>
+<tr><td>Automated tests</td><td>Backend: 78 tests (including 8 integration tests against real MongoDB); front end: 108 tests; both run in CI.</td></tr>
+<tr><td>Pipeline</td><td>Full run green (test, build-push, deploy); <code>/api/health</code> reported the new commit as <code>version</code>; both targets healthy.</td></tr>
+<tr><td>Pull request with a failing test</td><td>Check turned red, only the test job ran, nothing deployed.</td></tr>
+<tr><td>Automatic rollback</td><td>A release whose API container crashed on start failed the rolling deploy; the rollback step restored the previous version. One sampled 502 (about 20 seconds) while the first server was switched; the other server stayed healthy.</td></tr>
+<tr><td>Scaling out and in</td><td>The initial load test (autocannon, 200 connections, 8 minutes, from a laptop in Pakistan to Sydney) did not raise CPU above about 14%, so it could not trigger scaling. Using the plan's fallback (CPU burn on the app servers through SSM), CPU reached 100% and the group scaled from 2 to 4 instances in about 6 minutes; after the load stopped it scaled back to 2 within about 15 minutes.</td></tr>
+<tr><td>Load test numbers</td><td>63,000 requests in 481 s (about 116 requests/s average), 55,400 successful, about 7,000 timeouts (11%), median latency 293 ms, p99 7.5 s. These reflect the single-laptop client and the long network path, not the servers' capacity; they should be read as a smoke test, not a benchmark.</td></tr>
+<tr><td>Server failure</td><td>One app instance terminated: the application kept answering (one 502 in the first seconds), and the group launched a healthy replacement in about 4.5 minutes.</td></tr>
+<tr><td>Database reboot</td><td>API health returned 503 for about 35 seconds, then recovered by itself; data was intact. This is the known single point of failure.</td></tr>
+<tr><td>Backup and restore</td><td>A dump was written to S3 and restored into a separate database; document counts matched (1 user, 1 note in each).</td></tr>
+<tr><td>Security checks</td><td>Private addresses and port 5000 unreachable from the internet; <code>/.env</code> returns the web app's index page; API without a token returns 401; no public IPs and no rule for port 22; least-privilege test passed after the fix above.</td></tr>
+</table>
+
+<h2 class="pb">7. Non-functional requirements, justification and limitations</h2>
+<table>
+<tr><th>NFR</th><th>Supporting decisions</th><th>Limitation / improvement</th></tr>
+<tr><td>Scalability</td><td>Stateless containers with JWT; load-balanced; Auto Scaling 2–4 (demonstrated 2→4→2).</td><td>The database scales only vertically; move to a replica set or DocumentDB.</td></tr>
+<tr><td>Availability / reliability</td><td>Two zones; ELB health checks replace bad instances (tested); Docker restart policy; nightly backups with a tested restore.</td><td>One MongoDB instance and one NAT Gateway (one zone) are single points of failure (database outage of about 35 s on reboot); use a 3-node replica set and a NAT per zone.</td></tr>
+<tr><td>Elasticity</td><td>Target tracking at 50% CPU with automatic scale-in.</td><td>Reaction takes minutes; the database is not elastic.</td></tr>
+<tr><td>Security</td><td>See section 5.</td><td>HTTP only because no domain was available; add a domain, an ACM certificate and HTTPS, plus AWS WAF. Web and API share hosts.</td></tr>
+<tr><td>Maintainability / deployability</td><td>Dockerfiles, compose, Terraform, CI/CD with tests, SHA-tagged images, automatic rollback.</td><td>No staging environment; Terraform state is local and must be backed up.</td></tr>
+<tr><td>Performance / latency</td><td>Nginx gzip and long-lived asset caching; health-checked routing.</td><td>Measured median 293 ms from Pakistan to Sydney is mostly network distance; a CDN such as CloudFront and a cache such as Redis would help.</td></tr>
+<tr><td>Cost efficiency</td><td>Burstable t3 instances, scale-in, free S3 gateway endpoint, log retention of 14 days, S3 lifecycle, teardown when idle.</td><td>NAT Gateway is the largest cost; see section 8.</td></tr>
+<tr><td>Portability</td><td>OCI images run anywhere; compose; configuration through environment variables; MongoDB image is not AWS-specific.</td><td>Terraform, SSM and the ALB are AWS-specific; Kubernetes and Helm would improve portability.</td></tr>
+</table>
+<p><b>Other honest limitations:</b> the stack was built and tested in a single sitting from a student account with one organization-level restriction that temporarily blocked the GitHub OIDC connection until the organization owner lifted it; ECR vulnerability scan results were not captured for the images built locally with attestation manifests (the CI builds disable them); and the load test used one laptop.</p>
+
+<h2>8. Cost</h2>
+<p>Estimated at about <b>US$127 per month</b> if always on in Sydney (730 hours, on-demand, 2 app servers): NAT Gateway about US$43, EC2 about US$39, Application Load Balancer about US$24, public IPv4 addresses about US$11, EBS about US$5, other services about US$5 (prices from the AWS Price List API; see <code>docs/COST-ESTIMATE.md</code>). Because the environment runs only while building and testing, actual spend is a few US dollars per day. Two optimizations: replacing the NAT Gateway with a small NAT instance saves about US$39 per month (a managed-service trade-off), and moving to Graviton (arm64) instances saves about US$7.6 per month; running only about 8 hours per working day cuts the hourly-billed items by about US$84 per month.</p>
+
+</body></html>
