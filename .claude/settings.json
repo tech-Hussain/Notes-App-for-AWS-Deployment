@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(terraform apply*)",
+      "Bash(terraform apply*)",
+      "Bash(gh secret set*)",
+      "PowerShell(gh secret set*)"
+    ]
+  }
+}

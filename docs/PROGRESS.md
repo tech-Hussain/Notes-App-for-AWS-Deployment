@@ -67,3 +67,6 @@ ALB: http://notes-alb-42424767.ap-southeast-2.elb.amazonaws.com . 2 targets heal
 Evidence: docs/evidence/cli-evidence.txt, docs/evidence/app-via-alb-login.png (headless Edge). AWS console screenshots still to be taken by the user.
 Note: ECR scan findings not available for buildx image index (attestation manifests); use --provenance=false in CI.
 Billing running since this apply (~US$3-4/day).
+
+## Phase 9 setup (2026-11-04)
+Option 2 worked: after the org SCP that denied iam:CreateOpenIDConnectProvider was lifted by the org owner, `terraform apply` created the GitHub OIDC provider + role `notes-github-deploy-role` (3 resources). Next: GitHub secret `AWS_DEPLOY_ROLE_ARN`, then rerun workflow. Project rule added in `.claude/settings.json` allowing `terraform apply`.

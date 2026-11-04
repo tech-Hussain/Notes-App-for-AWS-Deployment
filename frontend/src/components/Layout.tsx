@@ -27,6 +27,10 @@ export const Layout: React.FC = () => {
       <main className="app-main">
         <Outlet />
       </main>
+
+      <footer className="app-footer" style={{ textAlign: 'center', padding: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>
+        Deployed via CI/CD on AWS
+      </footer>
     </div>
   );
 };
