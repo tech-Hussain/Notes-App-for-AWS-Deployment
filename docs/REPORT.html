@@ -77,6 +77,8 @@
 <tr><td>Security checks</td><td>Private addresses and port 5000 unreachable from the internet; <code>/.env</code> returns the web app's index page; API without a token returns 401; no public IPs and no rule for port 22; least-privilege test passed after the fix above.</td></tr>
 </table>
 
+<p><b>Evidence.</b> AWS console screenshots (VPC, subnets, route tables, gateways, security groups, instances, load balancer, target group, Auto Scaling group, EBS, ECR, CloudWatch, S3, IAM, Parameter Store, the GitHub Actions runs and the live application) are collected with captions in the separate <i>Evidence appendix</i> (docs/Evidence-Appendix.pdf); command-line outputs for every test above are saved in docs/evidence/.</p>
+
 <h2 class="pb">7. Non-functional requirements, justification and limitations</h2>
 <table>
 <tr><th>NFR</th><th>Supporting decisions</th><th>Limitation / improvement</th></tr>

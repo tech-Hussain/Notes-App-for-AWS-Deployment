@@ -44,3 +44,6 @@ Thumbs.db
 
 # Terraform plan files
 *tfplan
+
+# Raw console screenshots (contain account IDs); only redacted copies are committed
+docs/evidence/Screenshots/
