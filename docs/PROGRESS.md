@@ -99,3 +99,6 @@ Outstanding for the owner: confirm the SNS subscription email, AWS console scree
 
 ## Screenshots and appendix (2026-11-05)
 18 console screenshots added (renamed by content, account IDs blacked out; originals kept outside the repo and the raw folder is gitignored). docs/EVIDENCE.html -> docs/Evidence-Appendix.pdf (captioned). Report regenerated (5 pages) and traceability table updated. Not captured, covered by CLI evidence: NAT gateway page, DB instance details, SG rule pages, ALB listener, budget, GitHub secrets page, IAM trust policy, Pricing Calculator export.
+
+## Phase 14 - Teardown (2026-11-05)
+Final backup taken (notes-20261104T194106Z.archive.gz, copied to the owner's laptop). `terraform destroy`: 71 resources destroyed. Leftover check (instances, NAT, ALB, EIP, volumes, VPC, ECR, S3, log groups, alarms, SNS, IAM roles, OIDC provider): none. SSM parameters (7) kept on purpose (free). The live ALB URL no longer works. Rebuild steps: docs/REBUILD.md. The CI/CD workflow will fail on pushes until the stack is rebuilt (AWS role gone).
