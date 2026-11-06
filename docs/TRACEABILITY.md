@@ -26,9 +26,9 @@ Console screenshots (redacted) are in `docs/evidence/` and captioned in `docs/Ev
 | 9 | Enhancement: S3 backups | `infra/s3.tf`, backup timer | `16-s3-backup-bucket.png` | backup-restore-test.txt | Done |
 | 9 | Enhancement: EBS | `infra/database.tf` | `11-ebs-volume.png` | cli-evidence.txt (encrypted) | Done |
 | 9 | Enhancement: cost estimate + 2 optimizations | `docs/COST-ESTIMATE.md` | (Pricing Calculator export not captured) | file | Done (calculator export optional) |
-| 10 | NFR justification and limitations | `docs/Technical-Report.pdf` section 7 | | | Done |
+| 10 | NFR justification and limitations | `docs/Technical-Report.pdf` / `.docx` section 7 | | | Done |
 | D1 | Architecture diagram | `docs/architecture.png` | | | Done |
 | D3 | Source files and repo link | GitHub repo | | README | Done |
-| D4 | Technical report 4-6 pages | `docs/Technical-Report.pdf` (5 pages) + `docs/Evidence-Appendix.pdf` | | | Done |
+| D4 | Technical report 4-6 pages | `docs/Technical-Report.pdf` (5 pages) and `docs/Technical-Report.docx` (4 pages in Word) + `docs/Evidence-Appendix.pdf` | | | Done |
 
 Not captured (supplemented by command-line evidence): NAT Gateway, database instance detail page, security-group rule pages, load-balancer listener, budget page, GitHub secrets page, IAM trust policy, Pricing Calculator export.
