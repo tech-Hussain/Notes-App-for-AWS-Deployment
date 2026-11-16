@@ -47,3 +47,6 @@ Thumbs.db
 
 # Raw console screenshots (contain account IDs); only redacted copies are committed
 docs/evidence/Screenshots/
+
+# Submission package (built locally)
+CEA-SE490-Deliverables.zip
