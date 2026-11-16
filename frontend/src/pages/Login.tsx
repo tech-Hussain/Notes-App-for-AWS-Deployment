@@ -64,8 +64,8 @@ export const Login: React.FC = () => {
     <div className="auth-page-container">
       <div className="auth-card">
         <div className="auth-card-header">
-          <h1 className="auth-card-title">Welcome Again</h1>
-          <p className="auth-card-subtitle">Sign in to access your saved notes</p>
+          <h1 className="auth-card-title">Welcome Back</h1>
+          <p className="auth-card-subtitle">Sign in to access your saved notes, Now welcome</p>
         </div>
 
         {serverError && (
