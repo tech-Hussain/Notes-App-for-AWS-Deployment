@@ -65,7 +65,7 @@ export const Login: React.FC = () => {
       <div className="auth-card">
         <div className="auth-card-header">
           <h1 className="auth-card-title">Welcome Back</h1>
-          <p className="auth-card-subtitle">Sign in to access your saved notes</p>
+          <p className="auth-card-subtitle">Sign in to access your saved notes, here we go again</p>
         </div>
 
         {serverError && (
